@@ -4,16 +4,14 @@ ENV NODE_ENV=production
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update && apt-get install -y \
+    git \
     curl \
-    ca-certificates \
-    bash \
+    lua5.4 \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Prometheus
-RUN curl -fsSL https://raw.githubusercontent.com/prometheus-lua/Prometheus/master/install.sh | sh
-
-ENV PATH="/root/.local/bin:${PATH}"
+# Download Prometheus source
+RUN git clone https://github.com/prometheus-lua/Prometheus.git /opt/Prometheus
 
 COPY package.json ./
 
