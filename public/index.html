@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="tl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Lua Obfuscator</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="bg"></div>
+
+    <main class="app">
+      <section class="panel">
+        <div class="header">
+          <div>
+            <p class="badge">PROMETHEUS</p>
+            <h1>Lua Obfuscator</h1>
+            <p class="desc">Paste mo ang Lua code mo, tapos i-obfuscate agad gamit ang Strong preset.</p>
+          </div>
+        </div>
+
+        <label class="label" for="code">Lua Code</label>
+        <textarea
+          id="code"
+          spellcheck="false"
+          placeholder='print("hello world")'
+        ></textarea>
+
+        <div class="actions">
+          <button id="obfuscateBtn" class="btn">
+            <span>Obfuscate</span>
+          </button>
+        </div>
+
+        <div class="status-row">
+          <span id="status">Ready.</span>
+          <span id="meta"></span>
+        </div>
+      </section>
+
+      <section class="panel output-panel">
+        <div class="output-head">
+          <h2>Output</h2>
+          <span class="pill">Strong only</span>
+        </div>
+
+        <pre id="output" class="output"></pre>
+
+        <button id="copyBtn" class="copy-btn" disabled>Copy output</button>
+      </section>
+    </main>
+
+    <script>
+      const codeEl = document.getElementById("code");
+      const outputEl = document.getElementById("output");
+      const statusEl = document.getElementById("status");
+      const metaEl = document.getElementById("meta");
+      const obfuscateBtn = document.getElementById("obfuscateBtn");
+      const copyBtn = document.getElementById("copyBtn");
+
+      function setStatus(text, kind = "") {
+        statusEl.textContent = text;
+        statusEl.dataset.kind = kind;
+      }
+
+      function rippleEffect(btn, event) {
+        const ripple = document.createElement("span");
+        const rect = btn.getBoundingClientRect();
+        const size = Math.max(rect.width, rect.height);
+        ripple.style.width = ripple.style.height = `${size}px`;
+        ripple.style.left = `${event.clientX - rect.left - size / 2}px`;
+        ripple.style.top = `${event.clientY - rect.top - size / 2}px`;
+        ripple.className = "ripple";
+        btn.appendChild(ripple);
+        setTimeout(() => ripple.remove(), 650);
+      }
+
+      obfuscateBtn.addEventListener("click", async (e) => {
+        rippleEffect(obfuscateBtn, e);
+
+        const code = codeEl.value.trim();
+        if (!code) {
+          setStatus("Maglagay muna ng Lua code.", "error");
+          return;
+        }
+
+        obfuscateBtn.disabled = true;
+        copyBtn.disabled = true;
+        outputEl.textContent = "";
+        metaEl.textContent = "Processing...";
+        setStatus("Obfuscating...", "");
+
+        try {
+          const res = await fetch("/api/obfuscate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ code })
+          });
+
+          const data = await res.json();
+
+          if (!res.ok || !data.ok) {
+            throw new Error(data.error || "Hindi nagtagumpay.");
+          }
+
+          outputEl.textContent = data.code || "";
+          metaEl.textContent = data.preset || "Strong";
+          copyBtn.disabled = !data.code;
+          setStatus("Done. Strong preset used.", "success");
+        } catch (err) {
+          setStatus(err.message || "May error.", "error");
+          metaEl.textContent = "Error";
+        } finally {
+          obfuscateBtn.disabled = false;
+        }
+      });
+
+      copyBtn.addEventListener("click", async () => {
+        try {
+          await navigator.clipboard.writeText(outputEl.textContent || "");
+          setStatus("Copied to clipboard.", "success");
+        } catch {
+          setStatus("Hindi nakopya.", "error");
+        }
+      });
+    </script>
+  </body>
+  </html>
